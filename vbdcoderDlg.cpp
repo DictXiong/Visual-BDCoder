@@ -148,6 +148,8 @@ BEGIN_MESSAGE_MAP(CvbdcoderDlg, CDialogEx)
     ON_COMMAND(ID_ACCELERATOR_DELETE, &CvbdcoderDlg::OnAcceleratorDelete)
     ON_BN_CLICKED(IDC_BUTTON1, &CvbdcoderDlg::OnBnClickedButton1)
     ON_NOTIFY(NM_DBLCLK, IDC_LIST, &CvbdcoderDlg::OnNMDblclkList)
+    ON_BN_CLICKED(IDC_BUTTON_SAVE_PRESET, &CvbdcoderDlg::OnBnClickedButtonSavePreset)
+    ON_BN_CLICKED(IDC_BUTTON_MANAGE_PRESETS, &CvbdcoderDlg::OnBnClickedButtonManagePresets)
 END_MESSAGE_MAP()
 
 
@@ -824,7 +826,7 @@ void CvbdcoderDlg::OnBnClickedButtonPause()
         m_pause.SetWindowTextW(L"继续");
         SuspendThread(ffmpegProcess.hThread);
     }
-    if (tmp== L"继续")
+    else if (tmp== L"继续")
     {
         suspendNow = false;
         m_pause.SetWindowTextW(L"暂停");
@@ -919,4 +921,18 @@ void CvbdcoderDlg::OnNMDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
     int iItem = m_list.GetNextSelectedItem(pos);
     if (iItem!=-1) ShellExecute(NULL, L"open", listItems[iItem].getPath(), NULL, NULL, SW_SHOWNORMAL);
     *pResult = 0;
+}
+
+//TODO!!!
+void CvbdcoderDlg::OnBnClickedButtonSavePreset()
+{
+    // TODO: 在此添加控件通知处理程序代码
+    AfxMessageBox(L"预设管理功能尚在开发中...");
+}
+
+//TODO!!!
+void CvbdcoderDlg::OnBnClickedButtonManagePresets()
+{
+    // TODO: 在此添加控件通知处理程序代码
+    AfxMessageBox(L"预设管理功能尚在开发中...");
 }

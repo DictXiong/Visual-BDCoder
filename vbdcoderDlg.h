@@ -86,4 +86,6 @@ public:
     CString para_outputDir;
     afx_msg void OnBnClickedButton1();
     afx_msg void OnNMDblclkList(NMHDR* pNMHDR, LRESULT* pResult);
+    afx_msg void OnBnClickedButtonSavePreset();
+    afx_msg void OnBnClickedButtonManagePresets();
 };

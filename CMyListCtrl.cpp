@@ -1,4 +1,4 @@
-#include "pch.h"
+ #include "pch.h"
 #include "CMyListCtrl.h"
 #include "vbdcoderDlg.h"
 BEGIN_MESSAGE_MAP(CMyListCtrl, CListCtrl)
@@ -18,7 +18,9 @@ void CMyListCtrl::OnDropFiles(HDROP hDropInfo)
     for (int i = 0; i != nNumOfFiles; i++)
     {
         DragQueryFile(hDropInfo, i, path, _MAX_PATH);
-        dlg->addToListItems(path, -1);
+        DWORD attrib = GetFileAttributes(path);
+        if (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY) == 0)
+            dlg->addToListItems(path, -1);
     }
     dlg->updateList();
     for (int i = 0; i != nNumOfFiles; i++)

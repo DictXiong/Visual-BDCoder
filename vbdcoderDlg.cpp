@@ -20,7 +20,7 @@
 #endif
 
 // 自定义常数
-const int COLUMN = 8;
+const int COLUMN = 9;
 const int MAX_ITEM = 1 << 10;
 
 // 自定义全局变量
@@ -202,8 +202,8 @@ BOOL CvbdcoderDlg::OnInitDialog()
     // End
 
     // ListCtrl 表头
-    TCHAR listHearders[COLUMN][10] = { L"文件", L"状态", L"格式", L"编码", L"视频码率", L"音频码率", L"剪切起点", L"剪切终点"};
-    int listColumnWidth[COLUMN] = {300,80,80,80,110,110,120,120};
+    TCHAR listHearders[COLUMN][10] = { L"文件", L"状态", L"格式", L"编码", L"视频码率", L"音频码率", L"剪切起点", L"剪切终点", L"路径"};
+    int listColumnWidth[COLUMN] = {150,80,80,80,110,110,120,120,200};
     LV_COLUMN lvColumn;
     for (int i = 0; i < COLUMN; i++)
     {
@@ -251,6 +251,10 @@ BOOL CvbdcoderDlg::OnInitDialog()
     v_end.SetDateTime(0, 0, 0, 0, 0, 0);
     updateSettings(true);
     //end
+
+    // edit hint
+    ((CEdit*)GetDlgItem(IDC_EDIT_OUTPUT_DIR))->SetCueBanner(L"原始文件夹");
+    // end
 
     // 测试
 

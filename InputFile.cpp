@@ -265,8 +265,13 @@ CString InputFile::getPath()
 
 std::vector<CString> InputFile::getItemInfo()
 {
+    CString tmp;
     std::vector<CString> ans;
-    ans.push_back(path);
+    int splitPos = path.ReverseFind(L'\\');
+    if (splitPos != -1) tmp = path.Right(path.GetLength() - splitPos - 1);
+    else tmp = path;
+    ans.push_back(tmp);
+
     switch (ready)
     {
     case READY: ans.push_back(L"¾ÍÐ÷"); break;
@@ -284,7 +289,6 @@ std::vector<CString> InputFile::getItemInfo()
     case CRF: ans.push_back(L"CRF"); break;
     case VBR: ans.push_back(L"VBR"); break;
     }
-    CString tmp;
     if (!vcopy)
     {
         if (code==CRF) tmp.Format(L"%d", crf);
@@ -309,6 +313,8 @@ std::vector<CString> InputFile::getItemInfo()
         ans.push_back(L"-");
         ans.push_back(L"-");
     }
+
+    ans.push_back(dir);
     return ans;
 }
 

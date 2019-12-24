@@ -704,6 +704,8 @@ UINT CvbdcoderDlg::runCoding(LPVOID pvParam)
         if (toBeTerminated)
         {
             toBeTerminated = false;
+            these->resetControlArea();
+            return 0;
         }
         listSize = these->m_list.GetItemCount();
         for (int i = 0; i != listSize; i++)

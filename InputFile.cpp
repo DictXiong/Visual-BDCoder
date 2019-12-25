@@ -5,7 +5,11 @@
 #include<vector>
 
 
-
+/*
+构造函数. 
+参数表: 路径, 格式, 编码, 视频码率 (CRF), 音频码率, 是否复制视频流, 是否复制音频流. 
+注意: 未指定的编码, CRF 将设置为 25, 码率设置为 5000.
+*/
 InputFile::InputFile(CString path, int format, int code, int vb, int ab, bool vcopy, bool acopy)
 {
     this->path = path;
@@ -31,6 +35,12 @@ InputFile::InputFile(CString path, int format, int code, int vb, int ab, bool vc
     
 }
 
+/*
+构造函数.
+参数表: 路径, 设置 (InputFile)
+使用现有的 InputFile 的设置来初始化.
+注意: 未指定的编码, CRF 将设置为 25, 码率设置为 5000.
+*/
 InputFile::InputFile(CString path, InputFile settings)
 {
     this->path = path;
@@ -47,6 +57,11 @@ InputFile::InputFile(CString path, InputFile settings)
     }
 }
 
+/*
+translate -> vector<CString>
+outputPath: 输出目录
+根据当前文件的转码设置, 生成一组转码命令行 (一个或者两个). 如果 outputPath 为空, 那么设定为当前文件夹.
+*/
 std::vector<CString> InputFile::translate(CString outputPath)
 {
     auto combineArgs = [](std::vector<CString> args)->CString
@@ -115,7 +130,6 @@ std::vector<CString> InputFile::translate(CString outputPath)
             ans.push_back(L"-pass 2");
             p2.push_back(L"-an NUL");
             commands.push_back(combineArgs(p2));
-            //ans.insert(ans.end(), p2.begin(), p2.end());
         }
     }
 
@@ -263,6 +277,11 @@ CString InputFile::getPath()
     return path;
 }
 
+/*
+getItemInfo -> vector<CString>
+不接受参数
+将转码设置转换为人类可读的字符数组. 用于显示视图中的列表. 
+*/
 std::vector<CString> InputFile::getItemInfo()
 {
     CString tmp;
@@ -318,6 +337,11 @@ std::vector<CString> InputFile::getItemInfo()
     return ans;
 }
 
+/*
+getData -> vector<int>
+不接受参数
+将转码设置转换为一组数值.
+*/
 std::vector<int> InputFile::getData()
 {
     if (code != CRF)
@@ -332,6 +356,11 @@ std::vector<int> InputFile::getData()
     }
 }
 
+/*
+setData -> bool
+vector<int>: 用一组数值表示的转码设置, writeNegativeOne: 标记是否写 -1 值, 默认为真
+设置转码设置为输入的转码设置
+*/
 bool InputFile::setData(std::vector<int> data, bool writeNegativeOne)
 {
     this->ready = true;
@@ -360,6 +389,12 @@ bool InputFile::setData(std::vector<int> data, bool writeNegativeOne)
     return false;
 }
 
+/*
+setData -> bool
+vector<int>: 用一组数值表示的转码设置, writeNegativeOne: 标记是否写 -1 值, 默认为真, 
+    overrideCRFOrVB: 标记是否写未指定的编码的设置, 默认为否
+重载函数. 设置转码设置为输入的转码设置
+*/
 bool InputFile::setData(InputFile data, bool writeNegativeOne, bool overrideCRFOrVB)
 {
     this->ready = true;

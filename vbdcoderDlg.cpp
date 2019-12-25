@@ -20,20 +20,28 @@
 #endif
 
 // 自定义常数
+// 列表列数
 const int COLUMN = 9;
+// 列表容量
 const int MAX_ITEM = 1 << 10;
 
 // 自定义全局变量
+// listItems 是存储的所有项目的容器. 某种意义上来说它类似于 ListCtl 的一个值变量. 
+// 通过 updateList 来把内容同步到视图列表中.
 std::vector<InputFile> listItems;
+// 预设
 std::vector<InputFile> presets;
+// 暂存变量, 表示了当前的转码设置. 某种意义上来说它类似于转码配置区的值变量, 
+// 通过 updateSettings(bool) 来同步设置.
 InputFile settingsNow(L"",0,0,0,0,0,0);
 
-// 多线程操作
+// 多线程操作的状态标记
 volatile BOOL threadRunning=false, toBeTerminated=false, terminateNow=false, suspendNow=false;
+
+// ffmpeg 线程的 pi, 用于线程的挂起与终止
 PROCESS_INFORMATION ffmpegProcess;
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
-
 class CAboutDlg : public CDialogEx
 {
 public:
@@ -71,8 +79,6 @@ END_MESSAGE_MAP()
 
 
 // CvbdcoderDlg 对话框
-
-
 
 CvbdcoderDlg::CvbdcoderDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_VBDCODER_DIALOG, pParent)
@@ -254,12 +260,10 @@ BOOL CvbdcoderDlg::OnInitDialog()
 
     // edit hint
     ((CEdit*)GetDlgItem(IDC_EDIT_OUTPUT_DIR))->SetCueBanner(L"原始文件夹");
-    // end
+
 
     // 测试
 
-    //InputFile test(L"D:\\1.mp4",H264,VBR, 1000,1000);
-    //listItems.push_back(test);
     addToListItems(L"D:\\tmp\\1.mp4",-1);
     updateList();
     m_list.SetCheck(0);
@@ -319,7 +323,11 @@ HCURSOR CvbdcoderDlg::OnQueryDragIcon()
 }
 
 
-
+/* 
+updateList() -> bool
+不接受参数.
+把当前的 listItems 列表同步到视图的列表中.
+*/
 bool CvbdcoderDlg::updateList()
 {
     int itemCountNow = m_list.GetItemCount();
@@ -349,7 +357,13 @@ bool CvbdcoderDlg::updateList()
     return 0;
 }
 
-
+/*
+OnBnClickedCheckCut() -> void
+不接受参数
+一系列的消息处理函数. 主要行为是: 首先将视图同步到关联变量 -> 修改暂存变量的值
+    -> 改变选中的项对应的 listItems 值 -> 将 listItems 同步到视图 
+    -> 将暂存变量同步到视图
+*/
 void CvbdcoderDlg::OnBnClickedCheckCut()
 {
     UpdateData(true);
@@ -381,19 +395,6 @@ void CvbdcoderDlg::OnBnClickedCheckCopyAudioStream()
     updateList();
     updateSettings(false);
 }
-
-
-bool CvbdcoderDlg::addToListItems(CString path, int pos)
-{
-    UpdateData(true);
-    InputFile tmp(path, settingsNow);
-    tmp.setCut(false);
-    tmp.setCutRange(std::make_pair(0, 0));
-    if (pos == -1) listItems.push_back(tmp);
-    else listItems.insert(listItems.begin() + pos, tmp);
-    return false;
-}
-
 
 void CvbdcoderDlg::OnBnClickedRadioFormat(UINT nCmdID)
 {
@@ -452,6 +453,29 @@ void CvbdcoderDlg::OnEnChangeEditAudioBitrate()
     }
 }
 
+/*
+addToListItems -> bool
+path: 欲添加的文件的路径; pos: 欲添加到列表中的位置, -1 表示添加到最后
+把文件添加到 listItems 中
+注意: 不会自动同步视图
+*/
+bool CvbdcoderDlg::addToListItems(CString path, int pos)
+{
+    UpdateData(true);
+    InputFile tmp(path, settingsNow);
+    tmp.setCut(false);
+    tmp.setCutRange(std::make_pair(0, 0));
+    if (pos == -1) listItems.push_back(tmp);
+    else listItems.insert(listItems.begin() + pos, tmp);
+    return false;
+}
+
+/*
+setListItem -> bool
+foo: 一个函数, 接受一个类型为 InputFile 的参数
+将遍历当前列表中高亮选中的项目, 并使用 foo 作用于每个项目对应的 listItems.
+注意: foo 的形参列表应当自带引用; 不自动更新到视图
+*/
 template<typename Lambda> bool CvbdcoderDlg::setListItem(Lambda foo)
 {
     POSITION pos = m_list.GetFirstSelectedItemPosition();
@@ -463,7 +487,12 @@ template<typename Lambda> bool CvbdcoderDlg::setListItem(Lambda foo)
     return false;
 }
 
-
+/*
+setListItem -> bool
+不接受参数
+重载的函数. 将暂存变量的设置应用到每一个高亮选中的项目对应的 listItems 中. 
+注意: 不自动更新到视图. 
+*/
 bool CvbdcoderDlg::setListItem()
 {
     auto tmp = settingsNow.getData();
@@ -473,6 +502,11 @@ bool CvbdcoderDlg::setListItem()
     return false;
 }
 
+/*
+OnLvnItemchangedList -> void
+消息处理函数. 
+当列表中改变高亮选中时, 更新暂存变量与视图的设置区
+*/
 void CvbdcoderDlg::OnLvnItemchangedList(NMHDR* pNMHDR, LRESULT* pResult)
 {
     LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
@@ -496,18 +530,27 @@ void CvbdcoderDlg::OnLvnItemchangedList(NMHDR* pNMHDR, LRESULT* pResult)
     }
 }
 
+
+/*
+syncToSettings -> bool
+不接受参数
+重置视图中的预设列表为 presets 中的值
+*/
 bool CvbdcoderDlg::syncToSettings()
 {
     m_preset.ResetContent();
     for (auto i : presets)
     {
         m_preset.AddString(i.getPath());
-
     }
     return false;
 }
 
-
+/*
+applySettings -> bool
+不接受参数
+将暂存变量应用到列表中高亮选中的项目, 并更新视图
+*/
 bool CvbdcoderDlg::applySettings()
 {
     auto settings = settingsNow.getData();
@@ -518,7 +561,13 @@ bool CvbdcoderDlg::applySettings()
     return false;
 }
 
-
+/*
+updateSettings -> bool
+flag: 标记同步方向
+当 flag 为 true 时, 将视图设置区的值更新到暂存变量中; 否则, 将暂存变量中的值更新到视图. 
+    支持暂存变量值为 -1 的情况 (这代表着多个值)
+注: 效果类似于 UpdateData
+*/
 bool CvbdcoderDlg::updateSettings(bool flag)
 {
     UpdateData(true);
@@ -547,16 +596,29 @@ bool CvbdcoderDlg::updateSettings(bool flag)
         v_audioBitrate = tmp[3] == -1 ? L"(多个值)" : str;
         v_copyVideoStream = tmp[4];
         v_copyAudioStream = tmp[5];
-        v_cut = tmp[6];
-        v_start.SetTime(tmp[7] / 3600, tmp[7] % 3600 / 60, tmp[7] % 60);
-        v_end.SetTime(tmp[8] / 3600, tmp[8] % 3600 / 60, tmp[8] % 60);
+        if (tmp[6] != -1) v_cut = tmp[6];
+        else v_cut = false;
+        if (tmp[7]!=-1 && tmp[8]!=-1)
+        {
+            v_start.SetTime(tmp[7] / 3600, tmp[7] % 3600 / 60, tmp[7] % 60);
+            v_end.SetTime(tmp[8] / 3600, tmp[8] % 3600 / 60, tmp[8] % 60);
+        }
+        else 
+        {
+            v_start.SetTime(0, 0, 0);
+            v_end.SetTime(0, 0, 0);
+        }
         UpdateData(false);
         RefreshSettingBox();
     }
     return false;
 }
 
-
+/*
+RefreshSettingBox -> bool
+不接受参数
+单纯的视图操作. 从视图上获取值, 以此为凭据来保证各个编辑框的可用性 ([en/dis]able) 合理. 
+*/
 bool CvbdcoderDlg::RefreshSettingBox()
 {
     UpdateData(true);
@@ -591,7 +653,11 @@ bool CvbdcoderDlg::RefreshSettingBox()
     return false;
 }
 
-
+/*
+OnCbnSelchangeComboPreset -> void
+消息处理函数
+当 preset 组合框改变时, 将对应的预设加载到暂存变量并同步到视图
+*/
 void CvbdcoderDlg::OnCbnSelchangeComboPreset()
 {
     // TODO: 在此添加控件通知处理程序代码
@@ -599,7 +665,12 @@ void CvbdcoderDlg::OnCbnSelchangeComboPreset()
     updateSettings(false);
 }
 
-
+/*
+OnDtnDatetimechnageTimepicker -> void
+范围消息处理函数
+当时间控件改变时, 同步到暂存变量、listItems、视图
+注意: 该函数保证了终点时间大于起点
+*/
 void CvbdcoderDlg::OnDtnDatetimechangeTimepicker(UINT nCmdID, NMHDR* pNMHDR, LRESULT* pResult)
 {
     LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
@@ -615,6 +686,11 @@ void CvbdcoderDlg::OnDtnDatetimechangeTimepicker(UINT nCmdID, NMHDR* pNMHDR, LRE
     *pResult = 0;
 }
 
+/*
+OnAbout -> void
+消息处理函数
+显示 "关于" 对话框
+*/
 void CvbdcoderDlg::OnAbout()
 {
     //aboutDlg.ShowWindow(SW_SHOW);
@@ -624,7 +700,11 @@ void CvbdcoderDlg::OnAbout()
     aboutDlg->ShowWindow(SW_SHOW);
 }
 
-
+/*
+FolderExist -> bool
+strPath: 路径
+基于 API, 返回目标文件是否存在且为目录
+*/
 BOOL FolderExist(CString strPath)
 {
     WIN32_FIND_DATA wfd;
@@ -638,6 +718,11 @@ BOOL FolderExist(CString strPath)
     return bValue;
 }
 
+/*
+CreateFolder -> bool
+strPath: 路径
+基于 API, 创建文件夹, 返回创建是否成功
+*/
 BOOL CreateFolder(CString strPath)
 {
     SECURITY_ATTRIBUTES attrib;
@@ -648,6 +733,12 @@ BOOL CreateFolder(CString strPath)
     //	return ::CreateDirectory(strPath,NULL);
 }
 
+/*
+OnBnClickedButtonStart -> void 
+不接受参数
+消息处理函数. 点击 "开始" 按钮, 开始转码. 如果当前没有进行转码任务, 则创建线程开始转码. 
+注: 函数会检测目标文件夹的合法性. 若不合法, 将弹出对话框后退出.
+*/
 void CvbdcoderDlg::OnBnClickedButtonStart()
 {
     auto CStringToChar = [](CString& str)
@@ -681,6 +772,15 @@ void CvbdcoderDlg::OnBnClickedButtonStart()
     }
 }
 
+/*
+runCoding -> UINT
+线程主体函数, 静态成员
+接受类的一个实例指针, 找到列表中的第一个勾选并就绪的项目, 获取其 listItems 中的指针, 
+    使用 InputFile 的 translate 函数获得命令组. 使用管道运行 ffmpeg, 并显示到视图中. 
+    每次更新显示的间隔, 检测是否标记了 terminateNow, 若为真则立刻终止转码并退出;
+    每次寻找下一个转码项目之前, 检测是否标记了 toBeTerminated, 若为真则退出.
+注: 调用函数前应保证 listItems 与视图同步
+*/
 UINT CvbdcoderDlg::runCoding(LPVOID pvParam)
 {
     // Init
@@ -798,7 +898,11 @@ UINT CvbdcoderDlg::runCoding(LPVOID pvParam)
     return 0;
 }
 
-
+/*
+OnResetStatus -> void
+消息处理函数. 
+将 listItems 中所有项目的状态重置为就绪, 并更新视图. 
+*/
 void CvbdcoderDlg::OnResetStatus()
 {
     for (auto& i : listItems)
@@ -808,20 +912,33 @@ void CvbdcoderDlg::OnResetStatus()
     updateList();
 }
 
-
+/*
+OnBnClickedButtonStopafter -> void
+消息处理函数
+点击后, 标记 toBeTerminated, 使得 runCoding 在完成当前文件转码后停止.
+*/
 void CvbdcoderDlg::OnBnClickedButtonStopafter()
 {
     toBeTerminated = true;
 }
 
-
+/*
+OnBnClickedButtonStopnow -> void
+消息处理函数
+点击后, 标记 terminateNow, 使得 runCoding 立刻终止. 
+注意: 如果线程被挂起, 则会先恢复线程.
+*/
 void CvbdcoderDlg::OnBnClickedButtonStopnow()
 {
     terminateNow = true;
     if (suspendNow) ResumeThread(ffmpegProcess.hThread);
 }
 
-
+/*
+OnBnClickedButtonPause - void
+消息处理函数
+切换线程的挂起与恢复的状态, 并更新视图上对应按钮的文字
+*/
 void CvbdcoderDlg::OnBnClickedButtonPause()
 {
     CString tmp;
@@ -840,14 +957,23 @@ void CvbdcoderDlg::OnBnClickedButtonPause()
     }
 }
 
-
+/*
+resetControlArea -> void
+不接受参数
+恢复各标记变量, 恢复视图中控制按钮的文字
+*/
 void CvbdcoderDlg::resetControlArea()
 {
     threadRunning = false, toBeTerminated = false, terminateNow = false, suspendNow=false;
     m_pause.SetWindowTextW(L"暂停");
 }
 
-
+/*
+OnAcceleratorDelete -> void
+消息处理函数
+相应键盘上 Delete 按钮. 删除列表中高亮选中的项目.
+注意: 正在转码中的项目不会被删除. 
+*/
 void CvbdcoderDlg::OnAcceleratorDelete()
 {
     POSITION pos = m_list.GetFirstSelectedItemPosition();
@@ -870,6 +996,9 @@ void CvbdcoderDlg::OnAcceleratorDelete()
     //updateList();
 }
 
+/*
+重写虚函数, 以对 Delete 按钮做出响应. 
+*/
 BOOL CvbdcoderDlg::PreTranslateMessage(MSG* pMsg)
 {
     if (GetFocus() == GetDlgItem(IDC_LIST) && ::TranslateAccelerator(m_hWnd, m_hAccel, pMsg))
@@ -879,6 +1008,11 @@ BOOL CvbdcoderDlg::PreTranslateMessage(MSG* pMsg)
     return false;
 }
 
+/*
+OnBnClickedButton1 -> void
+消息处理函数
+弹出文件夹选择对话框, 选择一个文件夹并将其放入视图中的输出文件夹编辑框中.
+*/
 void CvbdcoderDlg::OnBnClickedButton1()
 {
     WCHAR szPath[MAX_PATH];     //存放选择的目录路径 
@@ -906,6 +1040,9 @@ void CvbdcoderDlg::OnBnClickedButton1()
 
 }
 
+/*
+"关于" 对话框的初始化, 设置其中的文字. 
+*/
 BOOL CAboutDlg::OnInitDialog()
 {
     CDialogEx::OnInitDialog();
@@ -918,11 +1055,14 @@ BOOL CAboutDlg::OnInitDialog()
                   // 异常: OCX 属性页应返回 FALSE
 }
 
-
+/*
+OnNMDblclkList -> void
+消息处理函数
+当双击列表中的项目时, 使用系统关联的程序打开之.
+*/
 void CvbdcoderDlg::OnNMDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
 {
     LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
-    // TODO: 在此添加控件通知处理程序代码.
     POSITION pos = m_list.GetFirstSelectedItemPosition();
     int iItem = m_list.GetNextSelectedItem(pos);
     if (iItem!=-1) ShellExecute(NULL, L"open", listItems[iItem].getPath(), NULL, NULL, SW_SHOWNORMAL);

@@ -2,6 +2,11 @@
 #include<utility>
 #include<vector>
 
+/*
+定义一些常量. 
+也许我应该用 enum 来实现. 
+*/
+
 constexpr short H264 = 0;
 constexpr short H265 = 1;
 
@@ -15,6 +20,11 @@ constexpr int CODING = 2;
 
 constexpr short MULTI_VALUE = -1;
 
+/*
+InputFile 类
+对应列表中的项目, 存储文件名、转码参数等. 
+注: 这也用于暂存变量与预设的存储.
+*/
 class InputFile
 {
   private:

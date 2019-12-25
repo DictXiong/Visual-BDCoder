@@ -5,11 +5,13 @@ BEGIN_MESSAGE_MAP(CMyListCtrl, CListCtrl)
     ON_WM_DROPFILES()
 END_MESSAGE_MAP()
 
-
+/*
+OnDropFiles -> void
+消息处理函数
+重写了列表的拖放操作, 支持多文件同时拖放. 如果拖入的是文件, 则加入列表. 
+*/
 void CMyListCtrl::OnDropFiles(HDROP hDropInfo)
 {
-    // TODO: 在此添加消息处理程序代码和/或调用默认值
-    
     auto dlg = (CvbdcoderDlg*)CvbdcoderDlg::FromHandle(AfxGetMainWnd()->GetSafeHwnd());
     wchar_t path[_MAX_PATH];
     auto size = GetItemCount();

@@ -24,9 +24,11 @@
 const int COLUMN = 9;
 // 列表容量
 const int MAX_ITEM = 1 << 10;
+// 支持的后缀名
+const CString availableExts[] = {L".mp4",L".mkv",L".m4v",L".avi",L".mov",L".flv",L".f4v",L".webm",L".ts",L".mpeg",L".mpg",L".dat",L".wmv",L".3gp",L".rm",L".rmvb",L".h261",L".h263",L".h264"};
 
 // 自定义全局变量
-// listItems 是存储的所有项目的容器. 某种意义上来说它类似于 ListCtl 的一个值变量. 
+// listItems 是存储的所有项目的容器. 某种意义上来说它类似于 ListCtrl 的一个值变量. 
 // 通过 updateList 来把内容同步到视图列表中.
 std::vector<InputFile> listItems;
 // 预设
@@ -156,6 +158,8 @@ BEGIN_MESSAGE_MAP(CvbdcoderDlg, CDialogEx)
     ON_NOTIFY(NM_DBLCLK, IDC_LIST, &CvbdcoderDlg::OnNMDblclkList)
     ON_BN_CLICKED(IDC_BUTTON_SAVE_PRESET, &CvbdcoderDlg::OnBnClickedButtonSavePreset)
     ON_BN_CLICKED(IDC_BUTTON_MANAGE_PRESETS, &CvbdcoderDlg::OnBnClickedButtonManagePresets)
+    ON_COMMAND(ID_CLEARLIST, &CvbdcoderDlg::OnClearlist)
+    ON_COMMAND(ID_ADDFILE, &CvbdcoderDlg::OnAddfile)
 END_MESSAGE_MAP()
 
 
@@ -190,7 +194,7 @@ BOOL CvbdcoderDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
-	ShowWindow(SW_MINIMIZE);
+	//ShowWindow(SW_MINIMIZE);
 
 	// TODO: 在此添加额外的初始化代码
 
@@ -971,7 +975,7 @@ void CvbdcoderDlg::resetControlArea()
 /*
 OnAcceleratorDelete -> void
 消息处理函数
-相应键盘上 Delete 按钮. 删除列表中高亮选中的项目.
+响应键盘上 Delete 按钮. 删除列表中高亮选中的项目.
 注意: 正在转码中的项目不会被删除. 
 */
 void CvbdcoderDlg::OnAcceleratorDelete()
@@ -1048,7 +1052,7 @@ BOOL CAboutDlg::OnInitDialog()
     CDialogEx::OnInitDialog();
 
     // TODO:  在此添加额外的初始化
-    v_CR = L"基于 BDcoder 开发 \r\n https://github.com/BearDic/bdcoder";
+    v_CR = L"基于 BDCoder 开发 \r\n https://github.com/DictXiong/bdcoder";
     UpdateData(false);
 
     return TRUE;  // return TRUE unless you set the focus to a control
@@ -1069,6 +1073,19 @@ void CvbdcoderDlg::OnNMDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
     *pResult = 0;
 }
 
+
+/*
+OnClearlist -> void
+消息处理函数
+清空列表
+*/
+void CvbdcoderDlg::OnClearlist()
+{
+    listItems.clear();
+    updateList();
+}
+
+
 //TODO!!!
 void CvbdcoderDlg::OnBnClickedButtonSavePreset()
 {
@@ -1081,4 +1098,59 @@ void CvbdcoderDlg::OnBnClickedButtonManagePresets()
 {
     // TODO: 在此添加控件通知处理程序代码
     AfxMessageBox(L"预设管理功能尚在开发中...");
+}
+
+/*
+OnAddfile -> void
+消息处理函数
+添加文件到列表
+*/
+void CvbdcoderDlg::OnAddfile()
+{
+    CString ext;
+    for (auto i : availableExts)
+    {
+        ext += L"*" + i + L";";
+    }
+    ext.Format(L"Video Files (%s)|%s|All files(*.*)|*.*||", ext,ext);
+    CFileDialog dlg(TRUE,NULL, NULL, OFN_ALLOWMULTISELECT | OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, ext, NULL);
+    dlg.m_ofn.lpstrTitle = _T("选择视频");
+    CString filename;
+    int start = listItems.size();
+    if (dlg.DoModal() == IDOK)
+    {
+        POSITION fileNamesPosition = dlg.GetStartPosition();
+        while (fileNamesPosition != NULL)
+        {
+            filename = dlg.GetNextPathName(fileNamesPosition);
+            addToListItems(filename,-1);
+        }
+        updateList();
+        int end = listItems.size();
+        for (int i = start; i != end; i++)
+        {
+            m_list.SetCheck(i,true);
+        }
+    }
+}
+
+/*
+checkPath -> bool
+path: 欲检测文件名或完整路径
+检测文件的后缀名是否合法 (availableExts)
+*/
+bool CvbdcoderDlg::checkPath(CString path)
+{
+    auto endswith = [](CString s, CString end)->bool
+    {
+        s = s.Trim();
+        auto tmp = s.Right(end.GetLength());
+        if (tmp == end) return true;
+        else return false;
+    };
+    for (auto i : availableExts)
+    {
+        if (endswith(path, i)) return true;
+    }
+    return false;
 }

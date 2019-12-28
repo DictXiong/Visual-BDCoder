@@ -88,4 +88,7 @@ public:
     afx_msg void OnNMDblclkList(NMHDR* pNMHDR, LRESULT* pResult);
     afx_msg void OnBnClickedButtonSavePreset();
     afx_msg void OnBnClickedButtonManagePresets();
+    afx_msg void OnClearlist();
+    afx_msg void OnAddfile();
+    static bool checkPath(CString path);
 };
